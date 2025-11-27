@@ -474,7 +474,7 @@
             font-size: 18px;
         }
 
-        /* FIXED: Improved playlist actions layout */
+        /* FIXED: Improved playlist actions layout - ICONS ONLY FOR ALL SCREENS */
         .playlist-actions {
             display: flex;
             gap: 5px;
@@ -488,38 +488,24 @@
             background: rgba(255, 255, 255, 0.1);
             border: none;
             color: white;
-            padding: 7px 10px;
+            padding: 7px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 4px;
             white-space: nowrap;
             flex-shrink: 0;
+            width: 34px;
+            height: 34px;
         }
 
-        /* FIXED: Icon-only buttons for mobile, text for desktop */
-        .action-btn.icon-only {
-            padding: 7px;
-            min-width: 34px;
-            justify-content: center;
-        }
-
-        .action-btn.icon-only .btn-text {
-            display: none;
-        }
-
-        @media (min-width: 480px) {
-            .action-btn.icon-only {
-                padding: 7px 10px;
-                min-width: auto;
-                justify-content: flex-start;
-            }
-            .action-btn.icon-only .btn-text {
-                display: inline;
-            }
+        /* REMOVED: Text labels - using icons only with tooltips */
+        .btn-text {
+            display: none !important;
         }
 
         .action-btn:hover {
@@ -1193,18 +1179,18 @@
                     <h2><i class="fas fa-list"></i> Playlist</h2>
                     <div class="playlist-actions">
                         <div class="export-import-btns">
-                            <button class="action-btn export-btn tooltip icon-only" id="export-btn" title="Export Playlist">
+                            <button class="action-btn export-btn tooltip" id="export-btn" title="Export Playlist">
                                 <i class="fas fa-share"></i>
                                 <span class="btn-text">Export</span>
                             </button>
-                            <button class="action-btn import-btn tooltip icon-only" id="import-btn" title="Import Playlist">
+                            <button class="action-btn import-btn tooltip" id="import-btn" title="Import Playlist">
                                 <i class="fas fa-file-import"></i>
                                 <span class="btn-text">Import</span>
                             </button>
-                            <input type="file" id="import-input" accept=".json,.miaplay">
+                            <input type="file" id="import-input" accept=".json,application/json,.miaplay">
                         </div>
                         <div class="sort-container" style="position: relative;">
-                            <button class="action-btn sort-btn tooltip icon-only" id="sort-btn" title="Sort Playlist">
+                            <button class="action-btn sort-btn tooltip" id="sort-btn" title="Sort Playlist">
                                 <i class="fas fa-sort"></i>
                                 <span class="btn-text">Sort</span>
                             </button>
@@ -1223,15 +1209,15 @@
                                 </button>
                             </div>
                         </div>
-                        <button class="action-btn mini-btn tooltip icon-only" id="mini-mode-btn" title="Mini Player Mode">
+                        <button class="action-btn mini-btn tooltip" id="mini-mode-btn" title="Mini Player Mode">
                             <i class="fas fa-compress"></i>
                             <span class="btn-text">Mini</span>
                         </button>
-                        <button class="action-btn offline-btn tooltip icon-only" id="offline-btn" title="Enable offline mode">
+                        <button class="action-btn offline-btn tooltip" id="offline-btn" title="Enable offline mode">
                             <i class="fas fa-download"></i>
                             <span class="btn-text">Offline</span>
                         </button>
-                        <button class="action-btn clear-btn tooltip icon-only" id="clear-btn" title="Clear playlist">
+                        <button class="action-btn clear-btn tooltip" id="clear-btn" title="Clear playlist">
                             <i class="fas fa-trash"></i>
                             <span class="btn-text">Clear All</span>
                         </button>
@@ -1330,12 +1316,31 @@
             let tracks = [];
             let dragSrcElement = null;
 
-            // FIXED: Audio state preservation variables
+            // FIXED: Audio state preservation for seamless playback
             let currentPlaybackTime = 0;
             let wasPlayingBeforeModification = false;
+            let audioContext = null;
+            let sourceNode = null;
+            let gainNode = null;
             
             // Check if browser supports service workers for advanced offline features
             const supportsOffline = 'serviceWorker' in navigator && 'caches' in window;
+            
+            // Initialize Web Audio API for seamless transitions
+            function initAudioContext() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        audioContext = new AudioContext();
+                        gainNode = audioContext.createGain();
+                        gainNode.connect(audioContext.destination);
+                    }
+                } catch (e) {
+                    console.log('Web Audio API not supported:', e);
+                }
+            }
+
+            initAudioContext();
             
             // Event Listeners
             playBtn.addEventListener('click', togglePlay);
@@ -1458,7 +1463,7 @@
                     const date = new Date();
                     const dateString = date.toISOString().split('T')[0];
                     const timeString = date.toTimeString().split(' ')[0].replace(/:/g, '-');
-                    a.download = `miaplay-playlist-${dateString}_${timeString}.miaplay`;
+                    a.download = `miaplay-playlist-${dateString}_${timeString}.json`;
                     
                     // Trigger download
                     document.body.appendChild(a);
@@ -1473,10 +1478,21 @@
                 }
             }
             
-            // NEW: Import Playlist Function
+            // NEW: Import Playlist Function with mobile fix
             function handlePlaylistImport(event) {
                 const file = event.target.files[0];
                 if (!file) return;
+                
+                // FIXED: Mobile import issue - check file type more broadly
+                const fileName = file.name.toLowerCase();
+                const isJsonFile = fileName.endsWith('.json') || fileName.endsWith('.miaplay');
+                const isCorrectType = file.type === 'application/json' || file.type === '' || isJsonFile;
+                
+                if (!isCorrectType) {
+                    showToast('Please select a valid MiaPlay playlist file (.json or .miaplay)', 'error');
+                    importInput.value = '';
+                    return;
+                }
                 
                 const reader = new FileReader();
                 
@@ -1574,7 +1590,7 @@
                         
                     } catch (error) {
                         console.error('Import error:', error);
-                        showToast('Failed to import playlist - file may be corrupted', 'error');
+                        showToast('Failed to import playlist - file may be corrupted or invalid', 'error');
                     }
                 };
                 
@@ -2001,7 +2017,7 @@
                 });
             }
             
-            // FIXED: removeTrack function with playback state preservation
+            // FIXED: removeTrack function with SEAMLESS playback preservation
             function removeTrack(index) {
                 if (tracks.length === 0) return;
                 
@@ -2011,57 +2027,63 @@
                 const currentSrc = audioPlayer.src;
                 const isRemovingCurrentTrack = index === currentTrackIndex;
                 
-                // If we're removing the currently playing track
-                if (isRemovingCurrentTrack) {
-                    if (isPlaying) {
-                        audioPlayer.pause();
-                        isPlaying = false;
-                        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                        albumArtContainer.classList.remove('playing');
+                // If we're NOT removing the current track, we can preserve playback seamlessly
+                if (!isRemovingCurrentTrack && wasPlaying) {
+                    // Simply update the array and UI without touching the audio
+                    tracks.splice(index, 1);
+                    
+                    // Update currentTrackIndex if the removed track was before the current one
+                    if (index < currentTrackIndex) {
+                        currentTrackIndex--;
                     }
                     
-                    // If it's the last track
-                    if (tracks.length === 1) {
+                    renderPlaylist();
+                    highlightCurrentTrack();
+                    return; // Exit early - no audio interruption
+                }
+                
+                // If we ARE removing the current track, handle it carefully
+                if (isRemovingCurrentTrack) {
+                    if (wasPlaying) {
+                        audioPlayer.pause();
+                    }
+                    
+                    // Remove the track
+                    tracks.splice(index, 1);
+                    
+                    // Handle edge cases
+                    if (tracks.length === 0) {
+                        // No tracks left
                         currentTrackIndex = 0;
                         audioPlayer.src = '';
                         updateTrackInfo();
-                    } 
-                    // If it's the last track in the playlist
-                    else if (currentTrackIndex === tracks.length - 1) {
-                        currentTrackIndex = 0;
-                    }
-                } 
-                // If we're removing a track that comes before the current one
-                else if (index < currentTrackIndex) {
-                    currentTrackIndex--;
-                }
-                
-                // Remove the track from the array
-                tracks.splice(index, 1);
-                
-                // Re-render the playlist
-                renderPlaylist();
-                highlightCurrentTrack();
-                
-                // If we have tracks and the current one is valid, update the player
-                if (tracks.length > 0 && currentTrackIndex < tracks.length) {
-                    if (wasPlaying && !isRemovingCurrentTrack) {
-                        // If we weren't removing the current track, restore playback
+                        isPlaying = false;
+                        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                        albumArtContainer.classList.remove('playing');
+                    } else if (currentTrackIndex >= tracks.length) {
+                        // Removed the last track, move to previous
+                        currentTrackIndex = tracks.length - 1;
                         audioPlayer.src = tracks[currentTrackIndex].src;
-                        audioPlayer.currentTime = currentTime;
-                        audioPlayer.play().catch(e => console.log('Auto-play prevented'));
-                        updateTrackInfo();
-                    } else if (isRemovingCurrentTrack && wasPlaying) {
-                        // If we removed the current track but were playing, start new track
-                        audioPlayer.src = tracks[currentTrackIndex].src;
-                        audioPlayer.play().catch(e => console.log('Auto-play prevented'));
+                        if (wasPlaying) {
+                            setTimeout(() => {
+                                audioPlayer.play().catch(e => console.log('Auto-play prevented'));
+                            }, 10);
+                        }
                         updateTrackInfo();
                     } else {
-                        // Just update the source
+                        // Move to next track
                         audioPlayer.src = tracks[currentTrackIndex].src;
+                        if (wasPlaying) {
+                            setTimeout(() => {
+                                audioPlayer.play().catch(e => console.log('Auto-play prevented'));
+                            }, 10);
+                        }
                         updateTrackInfo();
                     }
                 }
+                
+                renderPlaylist();
+                highlightCurrentTrack();
             }
             
             function clearPlaylist() {

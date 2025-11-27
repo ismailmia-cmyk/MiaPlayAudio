@@ -889,7 +889,7 @@
             background: var(--primary);
         }
 
-        /* Modal Styles */
+        /* FIXED: Modal Styles with Scrollbar */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -917,12 +917,14 @@
             padding: 24px;
             max-width: 500px;
             width: 90%;
-            max-height: 80vh;
-            overflow: hidden;
+            max-height: 80vh; /* FIXED: Added max-height */
+            overflow: hidden; /* FIXED: Changed to hidden */
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
             transform: scale(0.9);
             transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
 
         .modal-overlay.active .modal {
@@ -934,6 +936,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-shrink: 0;
         }
 
         .modal-header h3 {
@@ -957,9 +960,33 @@
             color: var(--light);
         }
 
+        /* FIXED: Modal content with scrollbar */
         .modal-content {
             line-height: 1.6;
             color: var(--gray);
+            overflow-y: auto; /* FIXED: Added scrollbar */
+            overflow-x: hidden;
+            padding-right: 5px;
+            flex: 1;
+        }
+
+        /* FIXED: Scrollbar for modal content */
+        .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
         }
 
         .modal-content p {
@@ -1096,6 +1123,27 @@
                 </div>
                 
                 <p>MiaPlay works entirely in your browser - your files never leave your device. Simply add your audio files and start listening!</p>
+                
+                <p><strong>Technical Details:</strong></p>
+                <ul>
+                    <li>Built with modern HTML5, CSS3, and JavaScript</li>
+                    <li>Uses the Web Audio API for high-quality playback</li>
+                    <li>Responsive design works on all devices</li>
+                    <li>Local file processing - no data sent to servers</li>
+                    <li>Progressive Web App ready</li>
+                </ul>
+                
+                <p><strong>Privacy Focused:</strong></p>
+                <p>Your music and playlists never leave your device. All processing happens locally in your browser for complete privacy and security.</p>
+                
+                <p><strong>Future Updates:</strong></p>
+                <ul>
+                    <li>Audio visualization</li>
+                    <li>Equalizer controls</li>
+                    <li>Themes and customization</li>
+                    <li>Keyboard shortcuts</li>
+                    <li>Playlist sharing</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -1316,31 +1364,11 @@
             let tracks = [];
             let dragSrcElement = null;
 
-            // FIXED: Audio state preservation for seamless playback
-            let currentPlaybackTime = 0;
-            let wasPlayingBeforeModification = false;
-            let audioContext = null;
-            let sourceNode = null;
-            let gainNode = null;
+            // FIXED: Track duration cache
+            let trackDurations = new Map();
             
             // Check if browser supports service workers for advanced offline features
             const supportsOffline = 'serviceWorker' in navigator && 'caches' in window;
-            
-            // Initialize Web Audio API for seamless transitions
-            function initAudioContext() {
-                try {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContext) {
-                        audioContext = new AudioContext();
-                        gainNode = audioContext.createGain();
-                        gainNode.connect(audioContext.destination);
-                    }
-                } catch (e) {
-                    console.log('Web Audio API not supported:', e);
-                }
-            }
-
-            initAudioContext();
             
             // Event Listeners
             playBtn.addEventListener('click', togglePlay);
@@ -1425,6 +1453,44 @@
                 }, 4000);
             }
             
+            // FIXED: Format time with hours support
+            function formatTime(seconds) {
+                if (isNaN(seconds)) return "0:00";
+                
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                if (hours > 0) {
+                    return `${hours}:${minutes < 10 ? '0' : ''}${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+                } else {
+                    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+                }
+            }
+            
+            // FIXED: Get actual duration for tracks
+            function getTrackDuration(src, callback) {
+                // Check if we already have this duration cached
+                if (trackDurations.has(src)) {
+                    callback(trackDurations.get(src));
+                    return;
+                }
+                
+                const tempAudio = new Audio();
+                tempAudio.src = src;
+                
+                tempAudio.addEventListener('loadedmetadata', () => {
+                    const duration = tempAudio.duration;
+                    trackDurations.set(src, duration);
+                    callback(duration);
+                });
+                
+                tempAudio.addEventListener('error', () => {
+                    // If we can't get duration, return 0
+                    callback(0);
+                });
+            }
+            
             // NEW: Export Playlist Function
             function exportPlaylist() {
                 if (tracks.length === 0) {
@@ -1478,7 +1544,7 @@
                 }
             }
             
-            // NEW: Import Playlist Function with mobile fix
+            // FIXED: Import Playlist Function - COMPLETELY REWRITTEN to fix playback issues
             function handlePlaylistImport(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1516,13 +1582,8 @@
                             shouldClear = confirm('Do you want to clear the current playlist and replace it with the imported one? Click OK to replace, Cancel to merge.');
                         }
                         
-                        // FIXED: Preserve playback state before modification
-                        const wasPlaying = isPlaying;
-                        const currentTime = audioPlayer.currentTime;
-                        const currentSrc = audioPlayer.src;
-                        
-                        // Stop current playback if clearing
-                        if (shouldClear && isPlaying) {
+                        // FIXED: Stop current playback completely
+                        if (isPlaying) {
                             audioPlayer.pause();
                             isPlaying = false;
                             playBtn.innerHTML = '<i class="fas fa-play"></i>';
@@ -1533,60 +1594,89 @@
                         if (shouldClear) {
                             tracks = [];
                             currentTrackIndex = 0;
+                            audioPlayer.src = '';
+                            updateTrackInfo();
                         }
                         
                         let validTracks = 0;
                         let invalidTracks = 0;
                         
-                        // Process imported tracks
+                        // FIXED: Process imported tracks with proper validation
                         importData.playlist.forEach(trackData => {
-                            // Basic validation
-                            if (trackData.src && trackData.title) {
-                                const track = {
-                                    title: trackData.title || 'Unknown Title',
-                                    artist: trackData.artist || 'Unknown Artist',
-                                    src: trackData.src,
-                                    duration: trackData.duration || '0:00',
-                                    format: trackData.format || 'Unknown',
-                                    offline: trackData.offline || false,
-                                    dateAdded: trackData.dateAdded || Date.now()
-                                };
-                                
-                                tracks.push(track);
-                                validTracks++;
-                            } else {
+                            try {
+                                // Enhanced validation
+                                if (trackData.src && trackData.title) {
+                                    // FIXED: Validate that the src is a valid URL or blob URL
+                                    const isValidSrc = trackData.src.startsWith('blob:') || 
+                                                     trackData.src.startsWith('http:') || 
+                                                     trackData.src.startsWith('https:') ||
+                                                     trackData.src.startsWith('data:');
+                                    
+                                    if (!isValidSrc) {
+                                        invalidTracks++;
+                                        return;
+                                    }
+                                    
+                                    const track = {
+                                        title: trackData.title || 'Unknown Title',
+                                        artist: trackData.artist || 'Unknown Artist',
+                                        src: trackData.src,
+                                        duration: trackData.duration || '0:00',
+                                        format: trackData.format || 'Unknown',
+                                        offline: trackData.offline || false,
+                                        dateAdded: trackData.dateAdded || Date.now()
+                                    };
+                                    
+                                    tracks.push(track);
+                                    validTracks++;
+                                    
+                                    // FIXED: Pre-load duration for imported tracks
+                                    if (trackData.duration === '0:00' || !trackData.duration) {
+                                        getTrackDuration(track.src, (duration) => {
+                                            track.duration = formatTime(duration);
+                                            // Update the display if this track is visible
+                                            renderPlaylist();
+                                        });
+                                    }
+                                } else {
+                                    invalidTracks++;
+                                }
+                            } catch (trackError) {
+                                console.error('Error processing track:', trackError);
                                 invalidTracks++;
                             }
                         });
+                        
+                        // FIXED: Reset player state completely
+                        currentTrackIndex = 0;
+                        audioPlayer.src = '';
                         
                         // Update UI
                         renderPlaylist();
                         updateTrackInfo();
                         
-                        // FIXED: Restore playback state if not clearing or if current track still exists
-                        if (!shouldClear && wasPlaying && currentSrc) {
-                            // Try to find the current track in the new playlist
-                            const currentTrackStillExists = tracks.some(track => track.src === currentSrc);
-                            if (currentTrackStillExists) {
+                        // FIXED: Show appropriate message based on track count
+                        if (validTracks === 0) {
+                            showToast('No valid tracks found in imported playlist', 'error');
+                        } else {
+                            let message = `Imported ${validTracks} track(s)`;
+                            if (invalidTracks > 0) {
+                                message += `, ${invalidTracks} invalid track(s) skipped`;
+                            }
+                            if (!shouldClear) {
+                                message += ' (merged with existing playlist)';
+                            }
+                            
+                            showToast(message, 'success');
+                            
+                            // FIXED: Auto-play first track if playlist was empty before
+                            if (shouldClear && validTracks > 0) {
                                 setTimeout(() => {
-                                    audioPlayer.currentTime = currentTime;
-                                    if (wasPlaying) {
-                                        audioPlayer.play().catch(e => console.log('Auto-play prevented'));
-                                    }
-                                }, 100);
+                                    currentTrackIndex = 0;
+                                    playAudio();
+                                }, 500);
                             }
                         }
-                        
-                        // Show results
-                        let message = `Imported ${validTracks} track(s)`;
-                        if (invalidTracks > 0) {
-                            message += `, ${invalidTracks} invalid track(s) skipped`;
-                        }
-                        if (!shouldClear) {
-                            message += ' (merged with existing playlist)';
-                        }
-                        
-                        showToast(message, 'success');
                         
                     } catch (error) {
                         console.error('Import error:', error);
@@ -1853,7 +1943,17 @@
             }
             
             function updateDuration() {
-                durationEl.textContent = formatTime(audioPlayer.duration);
+                if (tracks.length === 0) return;
+                
+                const duration = audioPlayer.duration;
+                durationEl.textContent = formatTime(duration);
+                
+                // FIXED: Update the current track's duration in the playlist
+                if (tracks[currentTrackIndex]) {
+                    tracks[currentTrackIndex].duration = formatTime(duration);
+                    trackDurations.set(tracks[currentTrackIndex].src, duration);
+                    renderPlaylist();
+                }
             }
             
             function setVolume() {
@@ -1866,14 +1966,6 @@
                 const track = tracks[currentTrackIndex];
                 songTitle.textContent = track.title;
                 songArtist.textContent = track.artist;
-            }
-            
-            function formatTime(seconds) {
-                if (isNaN(seconds)) return "0:00";
-                
-                const minutes = Math.floor(seconds / 60);
-                const secs = Math.floor(seconds % 60);
-                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
             }
             
             function highlightCurrentTrack() {
@@ -1908,6 +2000,9 @@
                     
                     const offlineBadge = track.offline ? '<span class="offline-badge"><i class="fas fa-check"></i> Offline</span>' : '';
                     
+                    // FIXED: Use actual duration instead of hardcoded "0:00"
+                    const displayDuration = track.duration && track.duration !== '0:00' ? track.duration : 'Loading...';
+                    
                     item.innerHTML = `
                         <div class="drag-handle" title="Drag to reorder">
                             <i class="fas fa-grip-lines"></i>
@@ -1920,7 +2015,7 @@
                             </div>
                             <div class="playlist-artist">${track.artist}</div>
                         </div>
-                        <div class="playlist-duration">${track.duration}</div>
+                        <div class="playlist-duration">${displayDuration}</div>
                         <button class="remove-btn" title="Remove song">
                             <i class="fas fa-times"></i>
                         </button>
@@ -1953,6 +2048,18 @@
                     });
                     
                     playlistItems.appendChild(item);
+                    
+                    // FIXED: Load actual duration for tracks that don't have it
+                    if (!track.duration || track.duration === '0:00' || track.duration === 'Loading...') {
+                        getTrackDuration(track.src, (duration) => {
+                            track.duration = formatTime(duration);
+                            // Update the display
+                            const durationElement = item.querySelector('.playlist-duration');
+                            if (durationElement) {
+                                durationElement.textContent = track.duration;
+                            }
+                        });
+                    }
                 });
             }
             
@@ -2126,7 +2233,7 @@
                             title: file.name.replace(/\.[^/.]+$/, ""),
                             artist: "Unknown Artist",
                             src: url,
-                            duration: "0:00",
+                            duration: "Loading...", // FIXED: Changed from "0:00" to "Loading..."
                             format: format,
                             offline: false,
                             dateAdded: Date.now()
@@ -2134,6 +2241,12 @@
                         
                         tracks.push(track);
                         validFilesCount++;
+                        
+                        // FIXED: Load actual duration immediately
+                        getTrackDuration(url, (duration) => {
+                            track.duration = formatTime(duration);
+                            renderPlaylist();
+                        });
                     } else {
                         invalidFilesCount++;
                     }

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MiaPlay</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for title customization -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Montserrat:wght@800&family=Roboto+Condensed:wght@700&family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -23,6 +25,12 @@
             --danger: #ff4757;
             --warning: #ffa502;
             --success: #2ed573;
+            
+            /* FONT CUSTOMIZATION VARIABLES */
+            --title-font: 'Poppins', sans-serif; /* Default title font */
+            --title-weight: 700; /* Font weight */
+            --title-transform: none; /* text-transform */
+            --title-letter-spacing: normal; /* letter-spacing */
         }
 
         body {
@@ -219,13 +227,17 @@
             background: linear-gradient(to right, var(--primary), var(--secondary));
         }
 
+        /* TITLE FONT CUSTOMIZATION */
         .player-header h1 {
             font-size: 28px;
             margin-bottom: 6px;
             background: linear-gradient(to right, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 700;
+            font-weight: var(--title-weight, 700);
+            font-family: var(--title-font, 'Poppins', sans-serif);
+            text-transform: var(--title-transform, none);
+            letter-spacing: var(--title-letter-spacing, normal);
         }
 
         .player-header p {
@@ -888,6 +900,137 @@
             background: var(--primary);
         }
 
+        /* Upload Progress Modal */
+        .upload-progress-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .upload-progress-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .upload-progress-content {
+            background: var(--dark);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .upload-progress-header {
+            margin-bottom: 20px;
+        }
+
+        .upload-progress-header h3 {
+            color: var(--primary);
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .upload-progress-header p {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .upload-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .upload-progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .upload-progress-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .upload-progress-stats span {
+            color: var(--light);
+            font-weight: bold;
+        }
+
+        /* Skeleton Loading */
+        .skeleton-track {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .skeleton-drag {
+            width: 12px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+
+        .skeleton-info {
+            flex: 1;
+        }
+
+        .skeleton-title {
+            width: 70%;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-bottom: 6px;
+        }
+
+        .skeleton-artist {
+            width: 50%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .skeleton-duration {
+            width: 40px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.6;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -1091,6 +1234,23 @@
 <body>
     <div class="toast" id="toast"></div>
     
+    <!-- Upload Progress Modal -->
+    <div class="upload-progress-modal" id="upload-progress-modal">
+        <div class="upload-progress-content">
+            <div class="upload-progress-header">
+                <h3><i class="fas fa-music"></i> Adding Tracks</h3>
+                <p>Processing your audio files...</p>
+            </div>
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="upload-progress-fill"></div>
+            </div>
+            <div class="upload-progress-stats">
+                <div>Processed: <span id="processed-count">0</span> / <span id="total-count">0</span></div>
+                <div id="upload-speed">Starting...</div>
+            </div>
+        </div>
+    </div>
+    
     <div class="modal-overlay" id="export-modal">
         <div class="modal">
             <div class="modal-header">
@@ -1245,7 +1405,8 @@
                 
                 <div class="volume-control">
                     <i class="fas fa-volume-down"></i>
-                    <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="50">
+                    <!-- VOLUME FIX: Changed from value="50" to value="25" -->
+                    <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="25">
                     <i class="fas fa-volume-up"></i>
                 </div>
                 
@@ -1325,7 +1486,7 @@
                     <i class="fas fa-info-circle"></i> About MiaPlay
                 </button>
             </div>
-            <p>MiaPlay © 2025</p> <!-- Font size fixed to 12px -->
+            <p>MiaPlay © 2025</p>
             <div class="progress-indicator" id="offline-progress" style="display: none;">
                 <span>Caching...</span>
                 <div class="progress-bar-small">
@@ -1351,7 +1512,12 @@
             const progress = document.getElementById('progress');
             const currentTimeEl = document.getElementById('current-time');
             const durationEl = document.getElementById('duration');
+            
+            // VOLUME FIX: Set to 25% by default
             const volumeSlider = document.getElementById('volume-slider');
+            volumeSlider.value = 25; // Ensure it's set to 25%
+            audioPlayer.volume = 0.25; // Set audio player volume
+            
             const playlistItems = document.getElementById('playlist-items');
             const fileInput = document.getElementById('file-input');
             const uploadBtn = document.getElementById('upload-btn');
@@ -1389,6 +1555,13 @@
             const importProgress = document.getElementById('import-progress');
             const importProgressBar = document.getElementById('import-progress-bar');
             
+            // Upload progress modal elements
+            const uploadProgressModal = document.getElementById('upload-progress-modal');
+            const uploadProgressFill = document.getElementById('upload-progress-fill');
+            const processedCount = document.getElementById('processed-count');
+            const totalCount = document.getElementById('total-count');
+            const uploadSpeed = document.getElementById('upload-speed');
+            
             // Constants
             const SUPPORTED_FORMATS = {
                 'mp3': 'MP3', 'mpeg': 'MP3', 'wav': 'WAV', 'ogg': 'OGG', 
@@ -1406,20 +1579,24 @@
             let tracks = [];
             let dragSrcElement = null;
             
-            // PERFORMANCE OPTIMIZATION: Store File objects, not Blob URLs
+            // Performance optimization
             let trackFiles = new Map(); // Maps track ID -> File object
-            let activeBlobUrl = null;   // Currently active Blob URL for memory management
+            let activeBlobUrl = null;   // Currently active Blob URL
             
             // File paths for folder-based export
             let filePaths = new Map(); // Maps track ID -> relative path
             let currentExportFolder = null;
             let currentImportData = null;
             
-            // Track identity for matching
+            // Track identity
             let trackIdCounter = 0;
             
             // Browser capability check
             const supportsOffline = 'serviceWorker' in navigator && 'caches' in window;
+            
+            // Upload state
+            let uploadStartTime = null;
+            let lastUpdateTime = null;
             
             // ========== HELPER FUNCTIONS ==========
             
@@ -1444,45 +1621,33 @@
             }
             
             function timeToSeconds(timeStr) {
-                // Convert "MM:SS" or "HH:MM:SS" to seconds
                 if (!timeStr || timeStr === '--:--' || timeStr === 'Loading...') return 0;
                 
                 const parts = timeStr.split(':').map(Number);
                 if (parts.length === 3) {
-                    // HH:MM:SS
                     return parts[0] * 3600 + parts[1] * 60 + parts[2];
                 } else if (parts.length === 2) {
-                    // MM:SS
                     return parts[0] * 60 + parts[1];
                 }
                 return 0;
             }
             
-            // Extract artist and title from filename patterns
             function extractMetadataFromFilename(filename) {
                 const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-                
-                // Common patterns:
-                // 1. Artist - Title.mp3
-                // 2. Title - Artist.mp3
-                // 3. Number. Artist - Title.mp3
-                // 4. Artist_-_Title.mp3 (with underscores)
                 
                 let title = nameWithoutExt;
                 let artist = "Unknown Artist";
                 
-                // Try pattern: Artist - Title
+                // Pattern: Artist - Title
                 const artistTitleMatch = nameWithoutExt.match(/^(.+?)\s*[-–—]\s*(.+)$/);
                 if (artistTitleMatch) {
                     artist = artistTitleMatch[1].trim();
                     title = artistTitleMatch[2].trim();
                     
-                    // Clean up common prefixes
-                    artist = artist.replace(/^\d+\.\s*/, ''); // Remove "01. " prefix
+                    artist = artist.replace(/^\d+\.\s*/, '');
                     title = title.replace(/^\d+\.\s*/, '');
                 }
                 
-                // Try pattern: Title - Artist (if previous didn't match well)
                 if (artist === "Unknown Artist") {
                     const titleArtistMatch = nameWithoutExt.match(/^(.+?)\s*[-–—]\s*(.+)$/);
                     if (titleArtistMatch) {
@@ -1491,14 +1656,12 @@
                     }
                 }
                 
-                // Clean up underscores
                 title = title.replace(/_/g, ' ');
                 artist = artist.replace(/_/g, ' ');
                 
                 return { title, artist };
             }
             
-            // Get duration from File object (async)
             async function getTrackDuration(file) {
                 return new Promise((resolve) => {
                     const tempAudio = new Audio();
@@ -1515,208 +1678,194 @@
                         URL.revokeObjectURL(objectUrl);
                     });
                     
-                    // Timeout for safety
                     setTimeout(() => {
                         resolve(0);
                         URL.revokeObjectURL(objectUrl);
-                    }, 10000);
+                    }, 5000);
                 });
             }
             
-            // ========== FILE EXTENSION FIX ==========
+            // ========== MODERN PROGRESSIVE UPLOAD ==========
             
-            function performFolderBasedExport(folderName) {
-                try {
-                    const exportData = {
-                        version: '4.0',
-                        app: 'MiaPlay',
-                        exportedAt: new Date().toISOString(),
-                        trackCount: tracks.length,
-                        baseFolder: folderName,
-                        playlist: [],
-                        note: 'Folder-based playlist. Audio files are referenced by relative path.'
-                    };
-                    
-                    // For each track, store relative path if available
-                    tracks.forEach((track, index) => {
-                        const trackData = {
-                            title: track.title,
-                            artist: track.artist,
-                            duration: track.duration,
-                            format: track.format,
-                            dateAdded: track.dateAdded
-                        };
-                        
-                        // Try to get relative path from our filePaths map
-                        const relativePath = filePaths.get(track.id);
-                        if (relativePath) {
-                            trackData.relativePath = relativePath;
-                            trackData.fileInfo = {
-                                name: track.originalFilename || track.title + '.' + track.format.toLowerCase(),
-                                size: track.fileSize
-                            };
-                        } else {
-                            // No relative path available (file was added directly)
-                            trackData.note = 'No relative path available - file was added directly';
-                            trackData.fileInfo = {
-                                name: track.originalFilename || track.title + '.' + track.format.toLowerCase()
-                            };
-                        }
-                        
-                        exportData.playlist.push(trackData);
-                    });
-                    
-                    const jsonData = JSON.stringify(exportData, null, 2);
-                    const blob = new Blob([jsonData], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    
-                    const date = new Date();
-                    const dateString = date.toISOString().split('T')[0];
-                    const timeString = date.toTimeString().split(' ')[0].replace(/:/g, '-');
-                    // FIX: Use .json extension
-                    a.download = `miaplay-playlist-${dateString}_${timeString}.json`;
-                    
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    showToast(`Playlist exported with ${tracks.length} track references to folder: ${folderName}`, 'success');
-                    
-                } catch (error) {
-                    console.error('Export error:', error);
-                    showToast('Failed to export playlist', 'error');
-                }
+            function showSkeletonTracks(count) {
+                const skeletonHTML = Array.from({length: Math.min(count, 10)}, () => `
+                    <div class="skeleton-track">
+                        <div class="skeleton-drag"></div>
+                        <div class="skeleton-info">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-artist"></div>
+                        </div>
+                        <div class="skeleton-duration"></div>
+                    </div>
+                `).join('');
+                
+                playlistItems.innerHTML = skeletonHTML;
             }
             
-            // ========== SORTING FIXES ==========
-            
-            function sortPlaylist(sortType) {
-                if (tracks.length === 0) return;
+            function showUploadProgress(processed, total) {
+                processedCount.textContent = processed;
+                totalCount.textContent = total;
                 
-                currentSort = sortType;
-                const currentTrackId = tracks[currentTrackIndex]?.id;
+                const progressPercent = (processed / total) * 100;
+                uploadProgressFill.style.width = `${progressPercent}%`;
                 
-                switch (sortType) {
-                    case 'title':
-                        tracks.sort((a, b) => a.title.localeCompare(b.title));
-                        break;
-                    case 'artist':
-                        tracks.sort((a, b) => a.artist.localeCompare(b.artist));
-                        break;
-                    case 'duration':
-                        // Convert duration strings to seconds for proper numeric sorting
-                        tracks.sort((a, b) => {
-                            const aSec = timeToSeconds(a.duration);
-                            const bSec = timeToSeconds(b.duration);
-                            return aSec - bSec; // Ascending order
-                        });
-                        break;
-                    case 'date':
-                        // Sort by dateAdded (newest first)
-                        tracks.sort((a, b) => b.dateAdded - a.dateAdded);
-                        break;
-                }
-                
-                // Find the new index of the currently playing track
-                if (currentTrackId) {
-                    const newIndex = tracks.findIndex(track => track.id === currentTrackId);
-                    if (newIndex !== -1) currentTrackIndex = newIndex;
-                }
-                
-                renderPlaylist();
-                
-                let sortMessage = '';
-                switch (sortType) {
-                    case 'title': sortMessage = 'Sorted by title'; break;
-                    case 'artist': sortMessage = 'Sorted by artist'; break;
-                    case 'duration': sortMessage = 'Sorted by duration (shortest first)'; break;
-                    case 'date': sortMessage = 'Sorted by date added (newest first)'; break;
-                }
-                
-                showToast(sortMessage, 'success');
-            }
-            
-            // ========== PERFORMANCE OPTIMIZATION ==========
-            
-            // Memory management: Clean up previous Blob URL
-            function cleanupPreviousBlobUrl() {
-                if (activeBlobUrl) {
-                    URL.revokeObjectURL(activeBlobUrl);
-                    activeBlobUrl = null;
-                }
-            }
-            
-            // Get audio source for a track (creates Blob URL on demand)
-            function getAudioSource(trackId) {
-                const file = trackFiles.get(trackId);
-                if (!file) return null;
-                
-                // Clean up previous Blob URL
-                cleanupPreviousBlobUrl();
-                
-                // Create new Blob URL
-                activeBlobUrl = URL.createObjectURL(file);
-                return activeBlobUrl;
-            }
-            
-            // Batch process files to avoid freezing
-            async function processFilesInBatches(files, batchSize = 5) {
-                const results = [];
-                
-                for (let i = 0; i < files.length; i += batchSize) {
-                    const batch = files.slice(i, i + batchSize);
-                    const batchPromises = batch.map(async (file, index) => {
-                        try {
-                            const format = getFileFormat(file);
-                            const metadata = extractMetadataFromFilename(file.name);
-                            const duration = await getTrackDuration(file);
-                            
-                            const trackId = trackIdCounter++;
-                            const track = {
-                                id: trackId,
-                                title: metadata.title,
-                                artist: metadata.artist,
-                                duration: formatTime(duration),
-                                format: format,
-                                offline: false,
-                                dateAdded: Date.now(),
-                                originalFilename: file.name,
-                                fileSize: file.size
-                            };
-                            
-                            // Store file reference (not Blob URL)
-                            trackFiles.set(trackId, file);
-                            
-                            // Store relative path if available
-                            if (file.webkitRelativePath) {
-                                filePaths.set(trackId, file.webkitRelativePath);
-                            }
-                            
-                            return track;
-                        } catch (error) {
-                            console.error('Error processing file:', file.name, error);
-                            return null;
-                        }
-                    });
+                // Calculate speed
+                if (uploadStartTime) {
+                    const currentTime = Date.now();
+                    const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
+                    const filesPerSecond = processed / elapsedSeconds;
                     
-                    const batchResults = await Promise.all(batchPromises);
-                    results.push(...batchResults.filter(Boolean));
-                    
-                    // Update UI after each batch
-                    if (i === 0 || i + batchSize >= files.length) {
-                        tracks.push(...batchResults.filter(Boolean));
-                        renderPlaylist();
+                    if (filesPerSecond > 1) {
+                        uploadSpeed.textContent = `${filesPerSecond.toFixed(1)} files/sec`;
+                    } else {
+                        const secondsPerFile = elapsedSeconds / processed;
+                        uploadSpeed.textContent = `${secondsPerFile.toFixed(1)} sec/file`;
                     }
                     
-                    // Yield to browser to prevent freezing
-                    await new Promise(resolve => setTimeout(resolve, 0));
+                    lastUpdateTime = currentTime;
+                }
+            }
+            
+            async function processSingleFile(file) {
+                try {
+                    const format = getFileFormat(file);
+                    if (!format || format === 'Unknown') return null;
+                    
+                    const metadata = extractMetadataFromFilename(file.name);
+                    const duration = await getTrackDuration(file);
+                    
+                    const trackId = trackIdCounter++;
+                    const track = {
+                        id: trackId,
+                        title: metadata.title,
+                        artist: metadata.artist,
+                        duration: formatTime(duration),
+                        format: format,
+                        offline: false,
+                        dateAdded: Date.now(),
+                        originalFilename: file.name,
+                        fileSize: file.size
+                    };
+                    
+                    trackFiles.set(trackId, file);
+                    
+                    if (file.webkitRelativePath) {
+                        filePaths.set(trackId, file.webkitRelativePath);
+                    }
+                    
+                    return track;
+                } catch (error) {
+                    console.error('Error processing file:', file.name, error);
+                    return null;
+                }
+            }
+            
+            async function handleModernFileUpload(files) {
+                const validFiles = Array.from(files).filter(file => {
+                    const format = getFileFormat(file);
+                    return format && format !== 'Unknown' && file.size <= 100 * 1024 * 1024;
+                });
+                
+                if (validFiles.length === 0) {
+                    showToast('No valid audio files selected', 'warning');
+                    return;
                 }
                 
-                return results.filter(Boolean);
+                // 1. INSTANT FEEDBACK: Show progress modal
+                uploadStartTime = Date.now();
+                uploadProgressModal.classList.add('active');
+                totalCount.textContent = validFiles.length;
+                processedCount.textContent = 0;
+                uploadSpeed.textContent = 'Starting...';
+                
+                // 2. SHOW SKELETON LOADING
+                showSkeletonTracks(validFiles.length);
+                
+                let allTracks = [];
+                let processedFiles = 0;
+                
+                // 3. PRIORITY PROCESSING: First 5 files immediately
+                const priorityBatch = validFiles.slice(0, 5);
+                const priorityPromises = priorityBatch.map(async (file, index) => {
+                    const track = await processSingleFile(file);
+                    processedFiles++;
+                    showUploadProgress(processedFiles, validFiles.length);
+                    return track;
+                });
+                
+                const priorityTracks = (await Promise.all(priorityPromises)).filter(Boolean);
+                allTracks.push(...priorityTracks);
+                
+                // 4. UPDATE UI with first batch
+                tracks.push(...priorityTracks);
+                renderPlaylist();
+                
+                // 5. BACKGROUND PROCESSING: Remaining files
+                if (validFiles.length > 5) {
+                    const remainingFiles = validFiles.slice(5);
+                    
+                    // Process in adaptive batches
+                    const batchSize = Math.min(3, Math.max(1, Math.floor(remainingFiles.length / 10)));
+                    
+                    for (let i = 0; i < remainingFiles.length; i += batchSize) {
+                        const batch = remainingFiles.slice(i, i + batchSize);
+                        const batchPromises = batch.map(async (file) => {
+                            const track = await processSingleFile(file);
+                            processedFiles++;
+                            showUploadProgress(processedFiles, validFiles.length);
+                            return track;
+                        });
+                        
+                        const batchTracks = (await Promise.all(batchPromises)).filter(Boolean);
+                        allTracks.push(...batchTracks);
+                        
+                        // Add to tracks array but only render occasionally
+                        tracks.push(...batchTracks);
+                        
+                        // Render every 5 files or at the end
+                        if (i % 10 === 0 || i + batchSize >= remainingFiles.length) {
+                            renderPlaylist();
+                        }
+                        
+                        // Yield to browser to keep UI responsive
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+                
+                // 6. FINALIZE
+                setTimeout(() => {
+                    uploadProgressModal.classList.remove('active');
+                    showToast(`Added ${allTracks.length} track${allTracks.length !== 1 ? 's' : ''} to playlist`, 'success');
+                }, 500);
+                
+                // Final render
+                renderPlaylist();
+                
+                return allTracks.length;
             }
+            
+            // ========== TITLE FONT CUSTOMIZATION GUIDE ==========
+            
+            // To change the title font, modify these CSS variables in the :root selector:
+            /*
+            Example 1: Bold Montserrat
+            --title-font: 'Montserrat', sans-serif;
+            --title-weight: 800;
+            --title-transform: uppercase;
+            --title-letter-spacing: 1px;
+            
+            Example 2: Roboto Condensed
+            --title-font: 'Roboto Condensed', sans-serif;
+            --title-weight: 700;
+            --title-transform: none;
+            --title-letter-spacing: 0.5px;
+            
+            Example 3: Bebas Neue (all caps)
+            --title-font: 'Bebas Neue', sans-serif;
+            --title-weight: 400;
+            --title-transform: uppercase;
+            --title-letter-spacing: 2px;
+            */
             
             // ========== EVENT LISTENERS ==========
             
@@ -1726,14 +1875,26 @@
             shuffleBtn.addEventListener('click', toggleShuffle);
             repeatBtn.addEventListener('click', toggleRepeat);
             progressBar.addEventListener('click', setProgress);
-            volumeSlider.addEventListener('input', setVolume);
+            
+            // VOLUME FIX: Set initial volume and add event listener
+            volumeSlider.addEventListener('input', function() {
+                const volume = this.value / 100;
+                audioPlayer.volume = volume;
+            });
             
             uploadBtn.addEventListener('click', () => {
                 fileInput.click();
                 showToast('Select audio files from your device', 'info');
             });
             
-            fileInput.addEventListener('change', handleFileUpload);
+            fileInput.addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    await handleModernFileUpload(files);
+                }
+                fileInput.value = '';
+            });
+            
             clearBtn.addEventListener('click', clearPlaylist);
             offlineBtn.addEventListener('click', toggleOfflineMode);
             miniModeBtn.addEventListener('click', toggleMiniMode);
@@ -1825,7 +1986,6 @@
                 showToast('Select a playlist file (.json or .miaplay)', 'info');
             });
             
-            // FIX: Accept both .json and .miaplay extensions
             importInput.addEventListener('change', handlePlaylistImport);
             
             closeImportModal.addEventListener('click', () => importModal.classList.remove('active'));
@@ -1889,7 +2049,6 @@
                 if (tracks.length === 0) return;
                 const track = tracks[currentTrackIndex];
                 
-                // Get audio source on demand
                 const audioSource = getAudioSource(track.id);
                 if (!audioSource) {
                     showToast(`Cannot play: ${track.title} - Audio file missing or inaccessible`, 'error');
@@ -1984,10 +2143,6 @@
                 }
             }
             
-            function setVolume() {
-                audioPlayer.volume = volumeSlider.value / 100;
-            }
-            
             function updateTrackInfo() {
                 if (tracks.length === 0) return;
                 const track = tracks[currentTrackIndex];
@@ -2001,6 +2156,25 @@
                     if (index === currentTrackIndex) item.classList.add('active');
                     else item.classList.remove('active');
                 });
+            }
+            
+            // ========== PERFORMANCE OPTIMIZATION ==========
+            
+            function cleanupPreviousBlobUrl() {
+                if (activeBlobUrl) {
+                    URL.revokeObjectURL(activeBlobUrl);
+                    activeBlobUrl = null;
+                }
+            }
+            
+            function getAudioSource(trackId) {
+                const file = trackFiles.get(trackId);
+                if (!file) return null;
+                
+                cleanupPreviousBlobUrl();
+                
+                activeBlobUrl = URL.createObjectURL(file);
+                return activeBlobUrl;
             }
             
             // ========== PLAYLIST MANAGEMENT ==========
@@ -2019,8 +2193,8 @@
                     return;
                 }
                 
-                // PERFORMANCE: Only render visible items (virtual scrolling)
-                const visibleItems = tracks.slice(0, 50); // Limit to 50 visible items
+                // Virtual scrolling: Show only 50 tracks at a time
+                const visibleItems = tracks.slice(0, 50);
                 
                 visibleItems.forEach((track, index) => {
                     const item = document.createElement('div');
@@ -2063,6 +2237,14 @@
                         removeTrack(index);
                     });
                     
+                    // Drag and drop
+                    item.addEventListener('dragstart', handleDragStart);
+                    item.addEventListener('dragover', handleDragOver);
+                    item.addEventListener('dragenter', handleDragEnter);
+                    item.addEventListener('dragleave', handleDragLeave);
+                    item.addEventListener('drop', handleDrop);
+                    item.addEventListener('dragend', handleDragEnd);
+                    
                     playlistItems.appendChild(item);
                 });
                 
@@ -2084,14 +2266,11 @@
                 const removedTrack = tracks[index];
                 const wasPlaying = isPlaying && index === currentTrackIndex;
                 
-                // Remove file reference
                 trackFiles.delete(removedTrack.id);
                 filePaths.delete(removedTrack.id);
                 
-                // Remove from tracks array
                 tracks.splice(index, 1);
                 
-                // Adjust current track index
                 if (index === currentTrackIndex) {
                     if (wasPlaying) {
                         cleanupPreviousBlobUrl();
@@ -2116,7 +2295,6 @@
                 updateTrackInfo();
                 
                 if (wasPlaying && tracks.length > 0) {
-                    // Auto-play next track if we were playing
                     setTimeout(() => playAudio(), 100);
                 }
             }
@@ -2132,7 +2310,6 @@
                     albumArtContainer.classList.remove('playing');
                 }
                 
-                // Clean up all file references
                 trackFiles.clear();
                 filePaths.clear();
                 
@@ -2147,53 +2324,118 @@
                 showToast('Playlist cleared', 'success');
             }
             
-            async function handleFileUpload(e) {
-                const files = Array.from(e.target.files);
-                if (files.length === 0) return;
+            // ========== SORTING ==========
+            
+            function sortPlaylist(sortType) {
+                if (tracks.length === 0) return;
                 
-                // Warn for large numbers of files
-                if (files.length > 20) {
-                    const proceed = confirm(`You selected ${files.length} files. Processing many files may take a moment. Continue?`);
-                    if (!proceed) {
-                        fileInput.value = '';
-                        return;
-                    }
+                currentSort = sortType;
+                const currentTrackId = tracks[currentTrackIndex]?.id;
+                
+                switch (sortType) {
+                    case 'title':
+                        tracks.sort((a, b) => a.title.localeCompare(b.title));
+                        break;
+                    case 'artist':
+                        tracks.sort((a, b) => a.artist.localeCompare(b.artist));
+                        break;
+                    case 'duration':
+                        tracks.sort((a, b) => {
+                            const aSec = timeToSeconds(a.duration);
+                            const bSec = timeToSeconds(b.duration);
+                            return aSec - bSec;
+                        });
+                        break;
+                    case 'date':
+                        tracks.sort((a, b) => b.dateAdded - a.dateAdded);
+                        break;
                 }
                 
-                showToast(`Processing ${files.length} file(s)...`, 'info');
-                
-                // Process files in batches to prevent freezing
-                const validFiles = files.filter(file => validateAudioFile(file));
-                
-                if (validFiles.length === 0) {
-                    showToast('No valid audio files selected', 'warning');
-                    fileInput.value = '';
-                    return;
+                if (currentTrackId) {
+                    const newIndex = tracks.findIndex(track => track.id === currentTrackId);
+                    if (newIndex !== -1) currentTrackIndex = newIndex;
                 }
                 
-                try {
-                    const newTracks = await processFilesInBatches(validFiles, 3); // Small batch size for mobile
-                    
-                    if (newTracks.length > 0) {
-                        showToast(`Added ${newTracks.length} file(s) to playlist`, 'success');
-                        if (supportsOffline && !isOfflineMode) {
-                            showToast('Enable offline mode to cache tracks for offline playback', 'info');
-                        }
-                    }
-                    
-                    if (newTracks.length < validFiles.length) {
-                        showToast(`${validFiles.length - newTracks.length} file(s) could not be processed`, 'warning');
-                    }
-                    
-                } catch (error) {
-                    console.error('Error processing files:', error);
-                    showToast('Error processing some files', 'error');
+                renderPlaylist();
+                
+                let sortMessage = '';
+                switch (sortType) {
+                    case 'title': sortMessage = 'Sorted by title'; break;
+                    case 'artist': sortMessage = 'Sorted by artist'; break;
+                    case 'duration': sortMessage = 'Sorted by duration (shortest first)'; break;
+                    case 'date': sortMessage = 'Sorted by date added (newest first)'; break;
                 }
                 
-                fileInput.value = '';
+                showToast(sortMessage, 'success');
             }
             
-            // ========== IMPORT/EXPORT FUNCTIONS ==========
+            function toggleSortDropdown() {
+                sortDropdown.classList.toggle('show');
+            }
+            
+            // ========== IMPORT/EXPORT ==========
+            
+            function performFolderBasedExport(folderName) {
+                try {
+                    const exportData = {
+                        version: '4.0',
+                        app: 'MiaPlay',
+                        exportedAt: new Date().toISOString(),
+                        trackCount: tracks.length,
+                        baseFolder: folderName,
+                        playlist: [],
+                        note: 'Folder-based playlist. Audio files are referenced by relative path.'
+                    };
+                    
+                    tracks.forEach((track) => {
+                        const trackData = {
+                            title: track.title,
+                            artist: track.artist,
+                            duration: track.duration,
+                            format: track.format,
+                            dateAdded: track.dateAdded
+                        };
+                        
+                        const relativePath = filePaths.get(track.id);
+                        if (relativePath) {
+                            trackData.relativePath = relativePath;
+                            trackData.fileInfo = {
+                                name: track.originalFilename || track.title + '.' + track.format.toLowerCase(),
+                                size: track.fileSize
+                            };
+                        } else {
+                            trackData.note = 'No relative path available - file was added directly';
+                            trackData.fileInfo = {
+                                name: track.originalFilename || track.title + '.' + track.format.toLowerCase()
+                            };
+                        }
+                        
+                        exportData.playlist.push(trackData);
+                    });
+                    
+                    const jsonData = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([jsonData], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    const date = new Date();
+                    const dateString = date.toISOString().split('T')[0];
+                    const timeString = date.toTimeString().split(' ')[0].replace(/:/g, '-');
+                    a.download = `miaplay-playlist-${dateString}_${timeString}.json`;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showToast(`Playlist exported with ${tracks.length} track references to folder: ${folderName}`, 'success');
+                    
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showToast('Failed to export playlist', 'error');
+                }
+            }
             
             function performSimpleExport() {
                 try {
@@ -2230,7 +2472,6 @@
                     const date = new Date();
                     const dateString = date.toISOString().split('T')[0];
                     const timeString = date.toTimeString().split(' ')[0].replace(/:/g, '-');
-                    // FIX: Use .json extension
                     a.download = `miaplay-playlist-${dateString}_${timeString}.json`;
                     
                     document.body.appendChild(a);
@@ -2250,7 +2491,6 @@
                 const file = event.target.files[0];
                 if (!file) return;
                 
-                // FIX: Accept both .json and .miaplay
                 const fileName = file.name.toLowerCase();
                 const isJsonFile = fileName.endsWith('.json') || fileName.endsWith('.miaplay');
                 const isCorrectType = file.type === 'application/json' || file.type === '' || isJsonFile;
@@ -2276,17 +2516,13 @@
                             return;
                         }
                         
-                        // Store import data for later processing
                         currentImportData = importData;
                         
-                        // Check version and handle accordingly
                         if (importData.version === '4.0' && importData.baseFolder) {
-                            // Folder-based playlist - show folder selection modal
                             trackCount.textContent = importData.trackCount;
                             missingCount.textContent = importData.trackCount;
                             importModal.classList.add('active');
                         } else {
-                            // Old format - simple import
                             handleOldPlaylistImport(importData);
                         }
                         
@@ -2327,13 +2563,11 @@
                     clearPlaylist();
                 }
                 
-                // Create a map of files by relative path and filename
                 const fileMap = new Map();
                 for (const file of folderFiles) {
                     const relativePath = file.webkitRelativePath || file.name;
                     fileMap.set(relativePath, file);
                     
-                    // Also map by filename for fallback matching
                     const fileName = file.name.toLowerCase();
                     fileMap.set(fileName, file);
                 }
@@ -2342,23 +2576,19 @@
                 let missingTracks = 0;
                 const newTracks = [];
                 
-                // Process each track in batches
                 for (let i = 0; i < currentImportData.playlist.length; i++) {
                     const trackData = currentImportData.playlist[i];
                     
-                    // Update progress
                     const progressPercent = ((i + 1) / currentImportData.playlist.length) * 100;
                     importProgressBar.style.width = `${progressPercent}%`;
                     
                     try {
                         let file = null;
                         
-                        // Try to find file by relative path first
                         if (trackData.relativePath) {
                             file = fileMap.get(trackData.relativePath);
                         }
                         
-                        // Fallback: try to find by filename
                         if (!file && trackData.fileInfo && trackData.fileInfo.name) {
                             const searchName = trackData.fileInfo.name.toLowerCase();
                             file = fileMap.get(searchName);
@@ -2381,17 +2611,14 @@
                                 fileSize: file.size
                             };
                             
-                            // Store file reference
                             trackFiles.set(trackId, file);
                             
-                            // Store relative path
                             const relativePath = file.webkitRelativePath || file.name;
                             filePaths.set(trackId, relativePath);
                             
                             newTracks.push(track);
                             restoredTracks++;
                             
-                            // Get duration asynchronously
                             getTrackDuration(file).then(duration => {
                                 track.duration = formatTime(duration);
                                 renderPlaylist();
@@ -2404,13 +2631,11 @@
                         missingTracks++;
                     }
                     
-                    // Yield to browser every 5 tracks
                     if (i % 5 === 0) {
                         await new Promise(resolve => setTimeout(resolve, 0));
                     }
                 }
                 
-                // Add all new tracks at once
                 tracks.push(...newTracks);
                 renderPlaylist();
                 updateTrackInfo();
@@ -2423,7 +2648,6 @@
                 
                 showToast(message, restoredTracks > 0 ? 'success' : 'warning');
                 
-                // Reset import data
                 currentImportData = null;
             }
             
@@ -2463,10 +2687,6 @@
             }
             
             // ========== UTILITY FUNCTIONS ==========
-            
-            function toggleSortDropdown() {
-                sortDropdown.classList.toggle('show');
-            }
             
             function toggleMiniMode() {
                 isMiniMode = !isMiniMode;
@@ -2509,19 +2729,6 @@
                 return 'Unknown';
             }
             
-            function validateAudioFile(file) {
-                const format = getFileFormat(file);
-                if (!format || format === 'Unknown') {
-                    showToast(`Unsupported format: ${file.name}`, 'warning');
-                    return false;
-                }
-                if (file.size > 100 * 1024 * 1024) {
-                    showToast(`File too large: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`, 'warning');
-                    return false;
-                }
-                return true;
-            }
-            
             // Drag and drop functionality
             function handleDragStart(e) {
                 dragSrcElement = this;
@@ -2550,7 +2757,6 @@
                     const fromIndex = Array.from(playlistItems.children).indexOf(dragSrcElement);
                     const toIndex = Array.from(playlistItems.children).indexOf(this);
                     
-                    // Adjust for the count element if present
                     const hasCountElement = tracks.length > 50;
                     const adjustedFromIndex = hasCountElement && fromIndex >= 50 ? fromIndex - 1 : fromIndex;
                     const adjustedToIndex = hasCountElement && toIndex >= 50 ? toIndex - 1 : toIndex;
@@ -2577,11 +2783,6 @@
                     item.classList.remove('drag-over');
                 });
             }
-            
-            // Initialize drag and drop for playlist items
-            document.addEventListener('DOMContentLoaded', () => {
-                // This will be called when playlist items are rendered
-            });
             
             // Clean up on page unload
             window.addEventListener('beforeunload', () => {
